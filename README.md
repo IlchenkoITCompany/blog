@@ -1,2 +1,2 @@
-# Framework
-This is structure for application
+# Site blog
+This is blog

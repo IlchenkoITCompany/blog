@@ -38,16 +38,15 @@ final class Router
                     }
                 } 
 
+                $this->controllerName = $params['controller'];
+                $this->actionName = $params['action'];
+
                 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === $this->requestMethod && $this->requestMethod !== 'GET') {
-                    $this->controllerName = $params['controller'].'Form';
-                    $this->actionName = $params['action'];
 
                     return ['formData' => $_POST, 'params' => $actionParams];
                 } else {
-                    $this->controllerName = $params['controller'];
-                    $this->actionName = $params['action'];
                     
-                    return ['params' => $actionParams];
+                    return ['formData' => NULL, 'params' => $actionParams];
                 }
             }
         }
@@ -69,11 +68,7 @@ final class Router
     private function getControllerName()
     {
         if($this->controllerName !== '') {
-            if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === $this->requestMethod && $this->requestMethod !== 'GET') {
-                return '\FormController\\'.$this->controllerName.'Controller';
-            } else {
             return '\Controller\\'.$this->controllerName.'Controller';
-            }
         } else {
             return '';
         }

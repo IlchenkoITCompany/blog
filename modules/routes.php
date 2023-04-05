@@ -4,39 +4,55 @@ $rules =
 [
     '/^$/' => 
     [
-        'controller' => 'Image',
+        'controller' => 'Record',
         'action' => 'list',
         'params' => NULL,
     ],
     
     '/^(\d+)$/' =>
     [
-        'controller' => 'Image',
+        'controller' => 'Record',
         'action' => 'item',
-        'params' => ['pictureId'],
+        'params' => ['recordId'],
         'requestMethod' => 'POST',
     ],
 
-    '/^users\/(\d+)$/' =>
+    '/^login$/' => 
     [
-        'controller' => 'Image',
+        'controller' => 'Login',
+        'action' => 'login',
+        'params' => NULL,
+        'requestMethod' => 'POST',
+    ],
+
+    '/^logout$/' => 
+    [
+        'controller' => 'Login',
+        'action' => 'logout',
+        'params' => NULL,
+        'requestMethod' => 'POST',
+    ],
+
+    '/^user\/(\d+)$/' =>
+    [
+        'controller' => 'Record',
         'action' => 'by_user',
         'params' => ['userId'],
     ],
 
-    '/^cats\/(\w+)$/' => 
+    '/^user\/(\d+)\/picture\/add/' =>
     [
-        'controller' => 'Image',
-        'action' => 'by_cat',
-        'params' => ['categoryId'],
+        'controller' => 'Record',
+        'action' => 'add',
+        'params' => ['userId'],
+        'requestMethod' => 'POST',
     ],
 
-    '/^users\/(\d+)\/pictures\/(\d+)\/edit$/' =>
+    '/^theme\/(\w+)$/' => 
     [
-        'controller' => 'Image',
-        'action' => 'edit',
-        'params' => ['userId', 'pictureId'],
-        'requestMethods' => 'POST',
+        'controller' => 'Record',
+        'action' => 'by_cat',
+        'params' => ['themeSlug'],
     ]
 ]
 

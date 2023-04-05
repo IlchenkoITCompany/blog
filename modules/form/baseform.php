@@ -5,12 +5,14 @@ class BaseForm
 {
     protected const FIELDS = [];
 
-    private static function get_initial_value($fld_name, $fld_params, $initial = [])
+    protected const FILES_FIELDS = [];
+    
+    private static function getInitialValue($fldName, $fldParams, $initial = [])
     {
-        if(isset($initial[$fld_name])) {
-            $val = $initial[$fld_name];
-        } else if (isset($fld_params['initial'])) {
-            $val = $fld_params['initial'];
+        if(isset($initial[$fldName])) {
+            $val = $initial[$fldName];
+        } else if (isset($fldParams['initial'])) {
+            $val = $fldParams['initial'];
         } else {
             $val = '';
         }
@@ -18,77 +20,89 @@ class BaseForm
     }
 
 
-    protected static function after_initialize_data(&$data) {}
+    protected static function afterInitializeData(&$data) {}
     
-    public static function get_initial_data($initial = []) 
+    public static function getInitialData($initial = []) 
     {
         $data = [];
-        foreach(static::FIELDS as $fld_name => $fld_params) {
-            $data[$fld_name] = self::get_initial_value($fld_name, $fld_params, $initial);
+        foreach(static::FIELDS as $fldName => $fldParams) {
+            $data[$fldName] = self::getInitialValue($fldName, $fldParams, $initial);
         }
-        static::after_initialize_data($data);
+        static::afterInitializeData($data);
         return $data;
     }
 
-    protected static function after_normalize_data(&$data, &$errors) {}
+    protected static function afterNormalizeData(&$data, &$errors) {}
 
-    public static function get_normalized_data($form_data)
+    public static function getNormalizedData($formData)
     {
         $data = [];
         $errors = [];
-        foreach(static::FIELDS as $fld_name => $fld_params) {
-            $fld_type = (isset($fld_params['type'])) ? $fld_params['type'] : 'string';
-            if($fld_type == 'boolean') {
-                $data[$fld_name] = !empty($form_data[$fld_name]);
+        foreach(static::FIELDS as $fldName => $fldParams) {
+            $fldType = (isset($fldParams['type'])) ? $fldParams['type'] : 'string';
+            if($fldType == 'boolean') {
+                $data[$fldName] = !empty($formData[$fldName]);
             } else {
-                if(empty($form_data[$fld_name])) {
-                    $data[$fld_name] = self::get_initial_value($fld_name, $fld_params);
+                if(empty($formData[$fldName])) {
+                    $data[$fldName] = self::getInitialValue($fldName, $fldParams);
                     
-                    if(!isset($fld_params['optional'])) {
-                        $errors[$fld_name] = 'Это поле обязательно к заполнению';
+                    if(!isset($fldParams['optional'])) {
+                        $errors[$fldName] = 'Это поле обязательно к заполнению';
                     }
                 } else {
-                    $fld_value = $form_data[$fld_name];
-                    switch($fld_type) {
+                    $fldValue = $formData[$fldName];
+                    switch($fldType) {
                         case 'integer':
-                            $v = filter_var($fld_value, FILTER_SANITIZE_NUMBER_INT);
+                            $v = filter_var($fldValue, FILTER_SANITIZE_NUMBER_INT);
                             if($v) {
-                                $data[$fld_name] = $v;
+                                $data[$fldName] = $v;
                             } else {
-                                $errors[$fld_name] = 'Введите целое число';
+                                $errors[$fldName] = 'Введите целое число';
                             }
                             break;
                         case 'float':
-                            $v = filter_var($fld_value, FILTER_SANITIZE_NUMBER_FLOAT, ['flags' => FILTER_FLAG_ALLOW_FRACTION]);
+                            $v = filter_var($fldValue, FILTER_SANITIZE_NUMBER_FLOAT, ['flags' => FILTER_FLAG_ALLOW_FRACTION]);
                             if($v) {
-                                $data[$fld_name] = $v;
+                                $data[$fldName] = $v;
                             } else {
-                                $errors[$fld_name] = 'Введите вещественное число';
+                                $errors[$fldName] = 'Введите вещественное число';
                             }
                             break;
                         case 'timestamp':
-                            $v = date('Y-m-d H:i:s', $fld_value);
+                            $v = date('Y-m-d H:i:s', $fldValue);
                             if($v) {
-                                $data[$fld_name] = $v;
+                                $data[$fldName] = $v;
                             } else {
-                                $errors[$fld_name] = 'Выберите дату и время';
+                                $errors[$fldName] = 'Выберите дату и время';
                             }
                             break;
                         case 'email':
-                            $v = filter_var($fld_value, FILTER_SANITIZE_EMAIL);
+                            $v = filter_var($fldValue, FILTER_SANITIZE_EMAIL);
                             if($v) {
-                                $data[$fld_name] = $v;
+                                $data[$fldName] = $v;
                             } else {
-                                $errors[$fld_name] = 'Введите адрес электронной почты';
+                                $errors[$fldName] = 'Введите адрес электронной почты';
                             }
                             break;
                         default:
-                            $data[$fld_name] = filter_var($fld_value, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+                            $data[$fldName] = filter_var($fldValue, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
                     }
                 }
             }
         }
-        static::after_normalize_data($data, $errors);
+        foreach (static::FILES_FIELDS as $field => $params) {
+            if(is_array($_FILES[$field]['name'])) {
+                foreach ($_FILES[$field]['name'] as $index => $name) {
+                    $error = $_FILES[$field]['error'][$index];
+                    \Helpers\fileProcessing($field, $name, $params['extensions'], $error, $errors, $params['optional'], TRUE);
+                }
+            } else {
+                $name = $_FILES[$field]['name'];
+                $error = $_FILES[$field]['error'];
+                \Helpers\fileProcessing($field, $name, $params['extensions'], $error, $errors, $params['optional'], FALSE);
+            }
+        }
+        static::afterNormalizeData($data, $errors);
         if($errors) {
             $data['__errors'] = $errors;
         }
@@ -96,19 +110,68 @@ class BaseForm
     }
 
 
-    protected static function after_prepare_data(&$data, &$norm_data) {}
+    protected static function afterPrepareData(&$data, &$normData) {}
 
-    public static function get_prepared_data($norm_data)
+    public static function getPreparedData($normData)
     {
         $data = [];
-        foreach(static::FIELDS as $fld_name => $fld_params) {
-            if (!isset($fld_params['nosave']) && isset($norm_data[$fld_name])) {
-                $val = $norm_data[$fld_name];
-                $data[$fld_name] = $val;
+        foreach(static::FIELDS as $fldName => $fldParams) {
+            if (!isset($fldParams['nosave']) && isset($normData[$fldName])) {
+                $val = $normData[$fldName];
+                $data[$fldName] = $val;
             } 
         }
-        static::after_prepare_data($data, $norm_data);
+        static::afterPrepareData($data, $normData);
         return $data;
+    }
+
+    public static function getRenderedForm($formData, $submitButton, $formCssStyle, $selectOptions = NULL)
+    {
+        $initialData = static::getInitialData();
+        if(static::FILES_FIELDS === NULL)
+            echo '<div class=\'container\'><form method=\'post\'>';
+        else {
+            echo '<div class=\'container\'><form method=\'post\' enctype=\'multipart/form-data\'>';
+        }
+        if(static::FIELDS !== NULL) {
+            foreach (static::FIELDS as $field => $params) {
+                echo \Helpers\getRenderedLabel($field, $params['labelName'], $params['fieldType']);
+                switch ($params['fieldType']) {
+                    case 'input':
+                        if(isset($params['placeholder']) && $params['placeholder'] !== '') {
+                            echo \Helpers\getRenderedInput($params['inputType'], $field, $formData, $initialData[$field], $params['placeholder']);
+                        } else {
+                            echo \Helpers\getRenderedInput($params['inputType'], $field, $formData, $initialData[$field]);
+                        }
+                        break;
+                    case 'checkbox':
+                        echo \Helpers\getRenderedCheckbox($field, $formData, $initialData[$field]);
+                        break;
+                    case 'textarea':
+                        echo \Helpers\getRenderedTextArea($field, $formData);
+                        break;
+                    case 'select':
+                        if($selectOptions !== NULL) {
+                            echo \Helpers\getRenderedSelect($field, $formData, $selectOptions[$field]);
+                        }
+                        break;
+                }
+                \Helpers\showErrors($field, $formData);
+            }
+        }
+        if(static::FILES_FIELDS !== NULL) {
+            foreach (static::FILES_FIELDS as $field => $params) {
+                echo \Helpers\getRenderedLabel($field, $params['labelName']);
+                if($params['maxFilesCount'] >= 2) {
+                    echo \Helpers\getRenderedFileInput($field, $formData, TRUE);
+                } else if ($params['maxFilesCount'] == 1) {
+                    echo \Helpers\getRenderedFileInput($field, $formData, FALSE);
+                }
+                \Helpers\showErrors($field, $formData);
+            }
+        }
+        echo '<input type=\'hidden\' name=\'token\' value=\''.$formData['__token'].'\'>';
+        echo '<button class=\'btn btn-primary mb-3 submit-button\' type=\'submit\'>'.$submitButton.'</button></form></div>';
     }
 }
 
